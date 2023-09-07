@@ -1,0 +1,402 @@
+
+#Boxplot of child age by hours spend in video games
+EXAMINE VARIABLES=a6_3 BY c_age 
+  /PLOT BOXPLOT STEMLEAF 
+  /COMPARE GROUPS 
+  /STATISTICS DESCRIPTIVES 
+  /CINTERVAL 95 
+  /MISSING LISTWISE 
+  /NOTOTAL.
+#Frequency tables for age, gender and region of teen
+FREQUENCIES VARIABLES=dagechildfinal d8 gor 
+  /ORDER=ANALYSIS.
+
+#Reliability for trait physical
+RELIABILITY 
+  /VARIABLES= agg_01, agg_04, agg_08 
+  /SCALE('ALL VARIABLES') ALL 
+  /MODEL=ALPHA 
+  /STATISTICS=DESCRIPTIVE SCALE 
+  /SUMMARY=TOTAL.
+
+  #Reliability for trait verbal
+  RELIABILITY 
+  /VARIABLES= agg_02, agg_05, agg_12 
+  /SCALE('ALL VARIABLES') ALL 
+  /MODEL=ALPHA 
+  /STATISTICS=DESCRIPTIVE SCALE 
+  /SUMMARY=TOTAL
+
+  #Reliability for trait anger
+  RELIABILITY 
+  /VARIABLES= agg_06, agg_10, agg_09 
+  /SCALE('ALL VARIABLES') ALL 
+  /MODEL=ALPHA 
+  /STATISTICS=DESCRIPTIVE SCALE 
+  /SUMMARY=TOTAL.
+
+  #Reliability for train hostility
+  RELIABILITY 
+  /VARIABLES= agg_03, agg_07, agg_11 
+  /SCALE('ALL VARIABLES') ALL 
+  /MODEL=ALPHA 
+  /STATISTICS=DESCRIPTIVE SCALE 
+  /SUMMARY=TOTAL.
+
+  #Computing traits as a mean of sum of questions 
+  compute trait_physical = mean(agg_01, agg_04, agg_08). 
+compute trait_verbal = mean(agg_02, agg_05, agg_12). 
+compute trait_anger = mean(agg_06, agg_10, agg_09). 
+compute trait_hostility = mean(agg_03, agg_07, agg_11). 
+execute. 
+ 
+DESCRIPTIVES VARIABLES= trait_physical, trait_verbal, trait_anger, trait_hostility 
+  /STATISTICS=MEAN STDDEV MIN MAX.
+
+  #Recoding variables for gaming time
+   
+RECODE a6_1 a6_2 a6_3 (1=0) (2=.5) (3=1) (4=2) (5=3) (6=4) (7=5) (8=6) (9=7) INTO game_one_time 
+    game_two_time game_three_time. 
+VARIABLE LABELS  game_one_time 'Game one time' /game_two_time 'Game two time' /game_three_time 
+    'Game three time'. 
+EXECUTE. 
+ 
+FREQUENCIES VARIABLES=  game_one_time game_two_time game_three_time 
+  /ORDER=ANALYSIS. 
+
+  #Descriptive statistics for game time
+   
+DESCRIPTIVES VARIABLES= game_one_time game_two_time game_three_time 
+  /STATISTICS=MEAN STDDEV MIN MAX.
+
+ #Total gaming time as a sum of each time spend on first, second and third game 
+
+compute gaming_time = sum(game_one_time, game_two_time, game_three_time). 
+execute.
+
+# Violence of game by PEGI
+if (rc_game_01_violence_PEGI = 1) pegi_one_violence = 1. 
+execute.
+if (rc_game_02_violence_PEGI = 1) pegi_two_violence = 1. 
+execute. 
+ 
+  FREQUENCIES VARIABLES = pegi_two_violence 
+  /ORDER=ANALYSIS.
+
+if (rc_game_03_violence_PEGI = 1) pegi_three_violence = 1. 
+execute. 
+ 
+  FREQUENCIES VARIABLES = pegi_three_violence 
+  /ORDER=ANALYSIS.
+
+
+# Computing violent time gaming
+compute game_one_violent_time = pegi_one_violence*game_one_time. 
+execute. 
+ 
+FREQUENCIES VARIABLES = game_one_violent_time 
+  /ORDER=ANALYSIS.
+
+compute game_two_violent_time = pegi_two_violence*game_two_time. 
+execute. 
+ 
+FREQUENCIES VARIABLES = game_two_violent_time 
+  /ORDER=ANALYSIS.
+  
+compute game_three_violent_time = pegi_three_violence*game_three_time. 
+execute. 
+ 
+FREQUENCIES VARIABLES = game_three_violent_time 
+  /ORDER=ANALYSIS.
+
+# Total violent gaming time
+
+compute game_violent_time = sum(game_one_violent_time, game_two_violent_time, 
+game_three_violent_time). 
+ 
+FREQUENCIES VARIABLES = game_violent_time 
+  /ORDER=ANALYSIS.
+
+  # Total violent gaming time by ESRB
+
+compute game_01_violent_time_esrb = esrb_01_violence*game_one_time. 
+compute game_02_violent_time_esrb = esrb_02_violence*game_two_time. 
+compute game_03_violent_time_esrb = esrb_03_violence*game_three_time. 
+execute.
+
+compute violent_game_time_esrb = sum(game_01_violent_time_esrb, 
+game_02_violent_time_esrb, game_03_violent_time_esrb). 
+execute. 
+ 
+DESCRIPTIVES VARIABLES= game_01_violent_time_esrb, 
+game_02_violent_time_esrb, game_03_violent_time_esrb  violent_game_time_esrb 
+  /STATISTICS=MEAN STDDEV MIN MAX.
+
+
+  # Gaming time squared 
+
+compute game_violent_time_square_esrb = violent_game_time_esrb* 
+violent_game_time_esrb. 
+execute. 
+
+compute game_violent_time_square = game_violent_time*game_violent_time. 
+execute.
+
+# Violent player 
+compute violent_game_player = 0. 
+if(game_violent_time>0) violent_game_player = 1. 
+execute.
+
+
+#Descriptive for aggresion behaviour as computed variable by carers
+ 
+DESCRIPTIVES VARIABLES=conduct_problems 
+  /STATISTICS=MEAN STDDEV MIN MAX.
+
+
+  DESCRIPTIVES VARIABLES= game_one_violent_time, game_two_violent_time, 
+game_three_violent_time, game_violent_time 
+  /STATISTICS=MEAN STDDEV MIN MAX.
+
+  #Check statement
+  CORRELATIONS 
+  /VARIABLES=A7 gaming_time game_violent_time 
+  /PRINT=TWOTAIL NOSIG 
+  /MISSING=PAIRWISE.
+
+
+  # Violent player statistics
+
+  FREQUENCIES VARIABLES=violent_game_player 
+  /ORDER=ANALYSIS.
+
+
+
+#Histogram of statement and gaming time
+  * Chart Builder. 
+GGRAPH 
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=ITEM_24 gaming_time MISSING=LISTWISE REPORTMISSING=NO 
+  /GRAPHSPEC SOURCE=INLINE. 
+BEGIN GPL 
+  SOURCE: s=userSource(id("graphdataset")) 
+  DATA: ITEM_24=col(source(s), name("ITEM_24"), unit.category()) 
+  DATA: gaming_time=col(source(s), name("gaming_time")) 
+  GUIDE: axis(dim(1), label("Many fears, easily scared (C1 - For each item, please mark the box ", 
+    "for Not True, Somewhat True or Certainly True. It would help us if you answered all items as ", 
+    "best you can even if you are not absolutely certain or the item seems daft! Please give your ans")) 
+  GUIDE: axis(dim(2), label("gaming_time")) 
+  GUIDE: text.title(label("Simple Histogram of gaming_time by Many fears, easily scared (C1 - ", 
+    "For each item, please mark the box for Not True, Somewhat True or Certainly True. It would ", 
+    "help us if you answered all items as best you can even if you are not absolutely certain or ", 
+    "the item seems daft! Please give your ans")) 
+  SCALE: cat(dim(1), include("1", "2", "3")) 
+  SCALE: linear(dim(2), include(0)) 
+  ELEMENT: interval(position(ITEM_24*gaming_time), shape.interior(shape.square)) 
+END GPL.
+
+# Scatter plot of gaming time by trait anger
+* Chart Builder. 
+GGRAPH 
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=trait_anger gaming_time MISSING=LISTWISE 
+    REPORTMISSING=NO 
+  /GRAPHSPEC SOURCE=INLINE 
+  /FITLINE TOTAL=NO SUBGROUP=NO. 
+BEGIN GPL 
+  SOURCE: s=userSource(id("graphdataset")) 
+  DATA: trait_anger=col(source(s), name("trait_anger")) 
+  DATA: gaming_time=col(source(s), name("gaming_time")) 
+  GUIDE: axis(dim(1), label("trait_anger")) 
+  GUIDE: axis(dim(2), label("gaming_time")) 
+  GUIDE: text.title(label("Scatter Plot of gaming_time by trait_anger")) 
+  ELEMENT: point(position(trait_anger*gaming_time)) 
+END GPL.
+
+
+#Pie chart  of region where teen lives
+* Chart Builder. 
+GGRAPH 
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=gor COUNT()[name="COUNT"] MISSING=LISTWISE 
+    REPORTMISSING=NO 
+  /GRAPHSPEC SOURCE=INLINE. 
+BEGIN GPL 
+  SOURCE: s=userSource(id("graphdataset")) 
+  DATA: gor=col(source(s), name("gor"), unit.category()) 
+  DATA: COUNT=col(source(s), name("COUNT")) 
+  COORD: polar.theta(startAngle(0)) 
+  GUIDE: axis(dim(1), null()) 
+  GUIDE: legend(aesthetic(aesthetic.color.interior), label("GOR - Region - Which of these do you ", 
+    "live in? - take from sample or set from question")) 
+  GUIDE: text.title(label("Pie Chart Count of GOR - Region - Which of these do you live in? - ", 
+    "take from sample or set from question")) 
+  SCALE: linear(dim(1), dataMinimum(), dataMaximum()) 
+  SCALE: cat(aesthetic(aesthetic.color.interior), include( 
+"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14")) 
+  ELEMENT: interval.stack(position(summary.percent(COUNT))), color.interior(gor)) 
+END GPL.
+
+#Regression
+
+REGRESSION 
+  /DESCRIPTIVES MEAN STDDEV CORR SIG N 
+  /MISSING LISTWISE 
+  /STATISTICS COEFF OUTS CI(95) R ANOVA CHANGE ZPP 
+  /CRITERIA=PIN(.05) POUT(.10) 
+  /NOORIGIN 
+  /DEPENDENT game_violent_time 
+  /METHOD=STEPWISE trait_hostility
+
+  #Logistic Regression
+
+  LOGISTIC REGRESSION VARIABLES violent_game_player 
+  /METHOD=ENTER trait_physical trait_verbal trait_hostility 
+  /CRITERIA=PIN(.05) POUT(.10) ITERATE(20) CUT(.5).
+
+
+#Simple Bar of Child Age by A4 - How do you play ^f('A3_2')^?
+
+  * Chart Builder. 
+GGRAPH 
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=a4_2 c_age MISSING=LISTWISE REPORTMISSING=NO 
+  /GRAPHSPEC SOURCE=INLINE 
+  /COLORCYCLE COLOR1(119,55,143), COLOR2(215,0,51), COLOR3(41,134,38), COLOR4(243,103,42), 
+    COLOR5(227,215,16), COLOR6(0,180,160), COLOR7(255,196,226), COLOR8(171,73,243), COLOR9(95,195,56), 
+    COLOR10(63,90,168), COLOR11(254,130,180), COLOR12(208,202,140), COLOR13(204,134,63), 
+    COLOR14(119,55,143), COLOR15(236,230,208), COLOR16(69,70,71), COLOR17(92,202,136), 
+    COLOR18(208,83,52), COLOR19(204,127,228), COLOR20(225,188,29), COLOR21(237,75,75), 
+    COLOR22(28,205,205), COLOR23(92,113,72), COLOR24(225,139,14), COLOR25(9,38,114), 
+    COLOR26(90,100,94), COLOR27(155,0,0), COLOR28(207,172,227), COLOR29(150,145,145), 
+    COLOR30(63,235,124) 
+  /FRAME OUTER=NO INNER=NO 
+  /GRIDLINES XAXIS=NO YAXIS=NO. 
+BEGIN GPL 
+  SOURCE: s=userSource(id("graphdataset")) 
+  DATA: a4_2=col(source(s), name("a4_2"), unit.category()) 
+  DATA: c_age=col(source(s), name("c_age"), unit.category()) 
+  GUIDE: axis(dim(1), label("A4 - How do you play ^f('A3_2')^?")) 
+  GUIDE: axis(dim(2), label("Child Age")) 
+  GUIDE: text.title(label("Simple Bar of Child Age by A4 - How do you play ^f('A3_2')^?")) 
+  SCALE: cat(dim(1), include("1", "2", "3")) 
+  ELEMENT: interval(position(a4_2*c_age), shape.interior(shape.square)) 
+END GPL.
+
+#Simple bar of how teens are playing games
+* Chart Builder. 
+GGRAPH 
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=a4_2 COUNT()[name="COUNT"] MISSING=LISTWISE 
+    REPORTMISSING=NO 
+  /GRAPHSPEC SOURCE=INLINE 
+  /COLORCYCLE COLOR1(119,55,143), COLOR2(215,0,51), COLOR3(41,134,38), COLOR4(243,103,42), 
+    COLOR5(227,215,16), COLOR6(0,180,160), COLOR7(255,196,226), COLOR8(171,73,243), COLOR9(95,195,56), 
+    COLOR10(63,90,168), COLOR11(254,130,180), COLOR12(208,202,140), COLOR13(204,134,63), 
+    COLOR14(119,55,143), COLOR15(236,230,208), COLOR16(69,70,71), COLOR17(92,202,136), 
+    COLOR18(208,83,52), COLOR19(204,127,228), COLOR20(225,188,29), COLOR21(237,75,75), 
+    COLOR22(28,205,205), COLOR23(92,113,72), COLOR24(225,139,14), COLOR25(9,38,114), 
+    COLOR26(90,100,94), COLOR27(155,0,0), COLOR28(207,172,227), COLOR29(150,145,145), 
+    COLOR30(63,235,124) 
+  /FRAME OUTER=NO INNER=NO 
+  /GRIDLINES XAXIS=NO YAXIS=YES. 
+BEGIN GPL 
+  SOURCE: s=userSource(id("graphdataset")) 
+  DATA: a4_2=col(source(s), name("a4_2"), unit.category()) 
+  DATA: COUNT=col(source(s), name("COUNT")) 
+  GUIDE: axis(dim(1), label("A4 - How do you play ^f('A3_2')^?")) 
+  GUIDE: axis(dim(2), label("Count")) 
+  GUIDE: text.title(label("Simple Bar Count of A4 - How do you play ^f('A3_2')^?")) 
+  SCALE: cat(dim(1), include("1", "2", "3")) 
+  SCALE: linear(dim(2), include(0)) 
+  ELEMENT: interval(position(a4_2*COUNT), shape.interior(shape.square)) 
+END GPL.
+
+# GGRAPH do you play game with other's people?
+* Chart Builder. 
+GGRAPH 
+  /GRAPHDATASET NAME="graphdataset" VARIABLES=a5_1 COUNT()[name="COUNT"] MISSING=LISTWISE 
+    REPORTMISSING=NO 
+  /GRAPHSPEC SOURCE=INLINE 
+  /COLORCYCLE COLOR1(63,90,168), COLOR2(215,0,51), COLOR3(41,134,38), COLOR4(243,103,42), 
+    COLOR5(227,215,16), COLOR6(0,180,160), COLOR7(255,196,226), COLOR8(171,73,243), COLOR9(95,195,56), 
+    COLOR10(63,90,168), COLOR11(254,130,180), COLOR12(208,202,140), COLOR13(204,134,63), 
+    COLOR14(119,55,143), COLOR15(236,230,208), COLOR16(69,70,71), COLOR17(92,202,136), 
+    COLOR18(208,83,52), COLOR19(204,127,228), COLOR20(225,188,29), COLOR21(237,75,75), 
+    COLOR22(28,205,205), COLOR23(92,113,72), COLOR24(225,139,14), COLOR25(9,38,114), 
+    COLOR26(90,100,94), COLOR27(155,0,0), COLOR28(207,172,227), COLOR29(150,145,145), 
+    COLOR30(63,235,124) 
+  /FRAME OUTER=NO INNER=NO 
+  /GRIDLINES XAXIS=NO YAXIS=YES. 
+BEGIN GPL 
+  SOURCE: s=userSource(id("graphdataset")) 
+  DATA: a5_1=col(source(s), name("a5_1"), unit.category()) 
+  DATA: COUNT=col(source(s), name("COUNT")) 
+  GUIDE: axis(dim(1), label("A5 - Do you play this ^f('A3_1')^ with other people?")) 
+  GUIDE: axis(dim(2), label("Count")) 
+  GUIDE: text.title(label("Simple Bar Count of A5 - Do you play this ^f('A3_1')^ with other ", 
+    "people?")) 
+  SCALE: cat(dim(1), include("1", "2", "3", "4")) 
+  SCALE: linear(dim(2), include(0)) 
+  ELEMENT: interval(position(a5_1*COUNT), shape.interior(shape.square)) 
+END GPL.
+
+#Correlation matrix
+CORRELATIONS 
+  /VARIABLES=female gaming_time trait_physical trait_anger trait_hostility trait_verbal 
+    game_violent_time violent_game_time_esrb 
+  /PRINT=TWOTAIL NOSIG 
+  /STATISTICS DESCRIPTIVES 
+  /MISSING=PAIRWISE.
+
+CORRELATIONS 
+  /VARIABLES=gaming_time trait_hostility trait_anger trait_verbal trait_physical 
+    violent_game_time_esrb game_violent_time 
+  /PRINT=TWOTAIL NOSIG 
+  /MISSING=PAIRWISE.
+
+# T-Test on gender
+T-TEST GROUPS=female(0 1) 
+  /MISSING=ANALYSIS 
+  /VARIABLES=gaming_time game_violent_time conduct_problems 
+  /CRITERIA=CI(.95).
+
+  T-TEST GROUPS=female(1 0) 
+  /MISSING=ANALYSIS 
+  /VARIABLES=gaming_time game_violent_time trait_anger 
+  /CRITERIA=CI(.95).
+
+  T-TEST GROUPS=female(0 1) 
+  /MISSING=ANALYSIS 
+  /VARIABLES=gaming_time game_violent_time trait_anger 
+  /CRITERIA=CI(.95).
+
+  #Regression
+
+  REGRESSION 
+  /MISSING LISTWISE 
+  /STATISTICS COEFF OUTS R ANOVA CHANGE ZPP 
+  /CRITERIA=PIN(.05) POUT(.10) 
+  /NOORIGIN 
+  /DEPENDENT game_violent_time 
+  /METHOD=ENTER trait_physical trait_verbal trait_hostility trait_anger
+
+  REGRESSION 
+  /MISSING LISTWISE 
+  /STATISTICS COEFF OUTS R ANOVA CHANGE ZPP 
+  /CRITERIA=PIN(.05) POUT(.10) 
+  /NOORIGIN 
+  /DEPENDENT trait_physical 
+  /METHOD=ENTER game_violent_time game_violent_time_square gaming_time violent_game_time_esrb
+
+
+  REGRESSION 
+  /MISSING LISTWISE 
+  /STATISTICS COEFF OUTS R ANOVA CHANGE ZPP 
+  /CRITERIA=PIN(.05) POUT(.10) 
+  /NOORIGIN 
+  /DEPENDENT conduct_problems 
+  /METHOD=ENTER game_violent_time game_violent_time_square gaming_time violent_game_time_esrb 
+    trait_verbal trait_hostility trait_anger trait_physical
+
+    #T-Test on violent player or not
+
+    T-TEST GROUPS=violent_game_player(1 0) 
+  /MISSING=ANALYSIS 
+  /VARIABLES=trait_physical trait_verbal trait_anger trait_hostility 
+  /CRITERIA=CI(.95).
